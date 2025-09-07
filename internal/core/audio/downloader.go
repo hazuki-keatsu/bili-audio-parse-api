@@ -23,7 +23,9 @@ type Downloader struct {
 // NewDownloader 创建音频下载器
 func NewDownloader(cacheDir, userAgent, referer string) *Downloader {
 	// 确保缓存目录存在
-	os.MkdirAll(cacheDir, 0755)
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		fmt.Printf("Warning: failed to create cache directory %s: %v\n", cacheDir, err)
+	}
 
 	return &Downloader{
 		cacheDir:  cacheDir,

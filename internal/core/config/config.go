@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/viper"
@@ -53,11 +55,12 @@ type CORSConfig struct {
 }
 
 type LoggingConfig struct {
-	Level      string `mapstructure:"level"`
-	File       string `mapstructure:"file"`
-	MaxSize    int    `mapstructure:"max_size"`
-	MaxBackups int    `mapstructure:"max_backups"`
-	MaxAge     int    `mapstructure:"max_age"`
+	Level           string        `mapstructure:"level"`
+	File            string        `mapstructure:"file"`
+	MaxSize         int           `mapstructure:"max_size"`
+	MaxBackups      int           `mapstructure:"max_backups"`
+	MaxAge          int           `mapstructure:"max_age"`
+	CleanupInterval time.Duration `mapstructure:"cleanup_interval"`
 }
 
 func LoadConfig() (*Config, error) {
@@ -71,8 +74,8 @@ func LoadConfig() (*Config, error) {
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			// 配置文件未找到，使用默认值
-			fmt.Println("Config file not found, using defaults")
+			// 配置文件未找到，但不自动创建，使用默认值
+			fmt.Println("Config file not found, using default values. You can create configs/config.yaml manually.")
 		} else {
 			return nil, fmt.Errorf("failed to read config file: %w", err)
 		}
@@ -122,4 +125,56 @@ func setDefaults() {
 	viper.SetDefault("logging.max_size", 100)
 	viper.SetDefault("logging.max_backups", 7)
 	viper.SetDefault("logging.max_age", 30)
+	viper.SetDefault("logging.cleanup_interval", "24h")
+}
+
+// createDefaultConfig 创建默认配置文件
+func createDefaultConfig() error {
+	// 确保configs目录存在
+	configDir := "./configs"
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	// 默认配置内容
+	defaultConfig := `server:
+  host: "0.0.0.0"
+  port: "8080"
+  debug: false
+
+database:
+  type: "sqlite"
+  dsn: "./data.db"
+
+cache:
+  dir: "./parse_cache"
+  ttl: "24h"
+  cleanup_interval: "1h"
+
+bilibili:
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+  referer: "https://www.bilibili.com"
+  timeout: "30s"
+
+rate_limit:
+  enabled: true
+  requests_per_minute: 20
+  burst: 5
+
+cors:
+  allowed_origins: ["*"]
+  allowed_methods: ["GET", "POST", "OPTIONS"]
+  allowed_headers: ["*"]
+
+logging:
+  level: "info"
+  file: "./logs/app.log"
+  max_size: 100
+  max_backups: 7
+  max_age: 30
+  cleanup_interval: "24h"
+`
+
+	configFile := filepath.Join(configDir, "config.yaml")
+	return os.WriteFile(configFile, []byte(defaultConfig), 0644)
 }

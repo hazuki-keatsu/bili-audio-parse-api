@@ -9,8 +9,8 @@ database:
 
 cache:
   dir: "./parse_cache"
-  ttl: "1h"        # 缓存过期时间
-  cleanup_interval: "30m"  # 清理间隔
+  ttl: "1m"        # 缓存过期时间
+  cleanup_interval: "1m"  # 清理间隔
 
 bilibili:
   user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
@@ -30,6 +30,7 @@ cors:
 logging:
   level: "info"   # debug/info/warn/error
   file: "./logs/app.log"
-  max_size: 100   # MB
-  max_backups: 7
-  max_age: 30     # days
+  max_size: 100   # MB - 单个日志文件最大大小
+  max_backups: 7  # 保留的旧日志文件数量
+  max_age: 30     # days - 日志文件保留天数
+  cleanup_interval: "24h"  # 日志清理检查间隔

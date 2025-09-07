@@ -49,7 +49,18 @@ func (m *Manager) Get(bvid string, quality int) *models.AudioInfo {
 
 	// 1. 检查数据库记录
 	var record models.CacheRecord
-	if err := m.db.Where("cache_key = ? AND expires_at > ?", key, time.Now()).First(&record).Error; err != nil {
+	now := time.Now()
+
+	// 使用Find而不是First，避免"record not found"日志
+	result := m.db.Where("cache_key = ? AND expires_at > ?", key, now).Limit(1).Find(&record)
+	if result.Error != nil {
+		// 查询出错
+		return nil
+	}
+
+	if result.RowsAffected == 0 {
+		// 记录不存在或已过期，清理可能存在的文件
+		m.cleanupCacheFiles(key)
 		return nil
 	}
 
@@ -100,12 +111,13 @@ func (m *Manager) Get(bvid string, quality int) *models.AudioInfo {
 // Set 设置缓存
 func (m *Manager) Set(bvid string, quality int, audioInfo *models.AudioInfo) error {
 	key := m.generateKey(bvid, quality)
+	now := time.Now()
 
 	item := CacheItem{
 		Key:       key,
 		Data:      audioInfo,
-		CreatedAt: time.Now(),
-		ExpiresAt: time.Now().Add(m.ttl),
+		CreatedAt: now,
+		ExpiresAt: now.Add(m.ttl),
 	}
 
 	// 1. 写入缓存文件
@@ -119,7 +131,9 @@ func (m *Manager) Set(bvid string, quality int, audioInfo *models.AudioInfo) err
 		return fmt.Errorf("failed to write cache file: %w", err)
 	}
 
-	// 2. 记录到数据库
+	// 2. 记录到数据库 (先删除旧记录，避免重复)
+	m.db.Where("cache_key = ?", key).Delete(&models.CacheRecord{})
+
 	record := models.CacheRecord{
 		CacheKey:  key,
 		BVID:      bvid,
@@ -128,8 +142,7 @@ func (m *Manager) Set(bvid string, quality int, audioInfo *models.AudioInfo) err
 		ExpiresAt: item.ExpiresAt,
 	}
 
-	// 使用 Create 或 Save 来插入或更新记录
-	if err := m.db.Where(models.CacheRecord{CacheKey: key}).Assign(record).FirstOrCreate(&record).Error; err != nil {
+	if err := m.db.Create(&record).Error; err != nil {
 		// 数据库写入失败，但不删除缓存文件，因为缓存仍然有效
 		fmt.Printf("Warning: failed to save cache record to database: %v\n", err)
 	}
@@ -139,23 +152,47 @@ func (m *Manager) Set(bvid string, quality int, audioInfo *models.AudioInfo) err
 
 // CleanupExpired 清理过期缓存
 func (m *Manager) CleanupExpired() error {
+	now := time.Now()
 	// 1. 从数据库中找到过期记录
 	var expiredRecords []models.CacheRecord
-	if err := m.db.Where("expires_at < ?", time.Now()).Find(&expiredRecords).Error; err != nil {
+	if err := m.db.Where("expires_at < ?", now).Find(&expiredRecords).Error; err != nil {
 		return fmt.Errorf("failed to find expired records: %w", err)
 	}
 
+	cleanedCount := 0
 	// 2. 删除文件和数据库记录
 	for _, record := range expiredRecords {
-		// 删除文件
+		// 删除JSON缓存文件
 		if err := os.Remove(record.FilePath); err != nil && !os.IsNotExist(err) {
 			fmt.Printf("Warning: failed to remove cache file %s: %v\n", record.FilePath, err)
+		} else {
+			cleanedCount++
+		}
+
+		// 尝试删除对应的MP3文件
+		// 从JSON文件路径推断缓存键
+		cacheKey := record.CacheKey
+		jsonPath := filepath.Join(m.cacheDir, cacheKey+".json")
+
+		// 读取JSON文件获取MP3文件名
+		if data, err := os.ReadFile(jsonPath); err == nil {
+			var item CacheItem
+			if json.Unmarshal(data, &item) == nil && item.Data != nil && item.Data.FileName != "" {
+				mp3Path := filepath.Join(m.cacheDir, item.Data.FileName)
+				if err := os.Remove(mp3Path); err != nil && !os.IsNotExist(err) {
+					fmt.Printf("Warning: failed to remove MP3 file %s: %v\n", mp3Path, err)
+				}
+			}
 		}
 
 		// 删除数据库记录
 		if err := m.db.Delete(&record).Error; err != nil {
 			fmt.Printf("Warning: failed to delete cache record %d: %v\n", record.ID, err)
 		}
+	}
+
+	if cleanedCount > 0 {
+		fmt.Printf("Cleaned up %d expired cache files\n", cleanedCount)
 	}
 
 	return nil
@@ -172,10 +209,35 @@ func (m *Manager) generateKey(bvid string, quality int) string {
 func (m *Manager) StartCleanupWorker(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	go func() {
+		defer ticker.Stop()
 		for range ticker.C {
 			if err := m.CleanupExpired(); err != nil {
 				fmt.Printf("Cache cleanup error: %v\n", err)
 			}
 		}
 	}()
+}
+
+// cleanupCacheFiles 清理指定键的缓存文件
+func (m *Manager) cleanupCacheFiles(key string) {
+	// 先读取JSON文件获取MP3文件信息
+	jsonPath := filepath.Join(m.cacheDir, key+".json")
+	if data, err := os.ReadFile(jsonPath); err == nil {
+		var item CacheItem
+		if json.Unmarshal(data, &item) == nil && item.Data != nil && item.Data.FileName != "" {
+			// 删除对应的MP3文件
+			mp3Path := filepath.Join(m.cacheDir, item.Data.FileName)
+			if err := os.Remove(mp3Path); err != nil && !os.IsNotExist(err) {
+				fmt.Printf("Warning: failed to remove MP3 file %s: %v\n", mp3Path, err)
+			}
+		}
+	}
+
+	// 删除JSON缓存文件
+	if err := os.Remove(jsonPath); err != nil && !os.IsNotExist(err) {
+		fmt.Printf("Warning: failed to remove cache file %s: %v\n", jsonPath, err)
+	}
+
+	// 清理相关的数据库记录
+	m.db.Where("cache_key = ?", key).Delete(&models.CacheRecord{})
 }

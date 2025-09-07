@@ -9,6 +9,8 @@
 > - 开发文档撰写：Claude Sonnet 4
 > - 代码开发：Claude Sonnet 4
 > - 文档审查：hazuki-keatsu
+> - 代码审查：hazuki-keatsu
+> - Commit Message：Tongyi
 
 ## 功能特点
 
@@ -87,6 +89,13 @@ docker-compose up -d
 ```bash
 docker build -t bili-parse-api .
 docker run -p 8080:8080 -v $(pwd)/parse_cache:/root/parse_cache bili-parse-api
+```
+
+### 构建
+
+```bash
+cd bili-parse-api
+go build ./cmd/server
 ```
 
 ## API接口
