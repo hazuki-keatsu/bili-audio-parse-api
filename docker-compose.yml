@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  bili-parse-api:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - GIN_MODE=release
+      - JWT_SECRET=bili-parse-api-secret-key-2025
+      - ENCRYPTION_KEY=my-32-byte-encryption-key-12345
+    volumes:
+      - ./data:/root/data
+      - ./logs:/root/logs
+    restart: unless-stopped
