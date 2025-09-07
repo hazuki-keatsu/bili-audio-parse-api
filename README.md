@@ -55,9 +55,10 @@ ffmpeg -version
 cp configs/config.example.yaml configs/config.yaml
 ```
 
-5. **创建必要目录**
+5. **创建必要目录和文件**
 ```bash
 mkdir -p parse_cache logs
+touch data.db
 ```
 
 6. **运行服务**
@@ -84,10 +85,10 @@ docker run -p 8080:8080 -v $(pwd)/parse_cache:/root/parse_cache bili-parse-api
 
 ### 解析音频
 
-**GET** `/api/v1/parse/audio`
+**GET** `/api/v1/parse`
 
 **参数:**
-- `bvid` (必须): B站视频BV号，如 `BV1xx411c7mD`
+- `bv` (必须): B站视频BV号，如 `BV1xx411c7mD`
 - `quality` (可选): 音质代码，如 `30280` (192K)，默认为最高音质
 
 **响应示例:**
@@ -158,13 +159,16 @@ docker run -p 8080:8080 -v $(pwd)/parse_cache:/root/parse_cache bili-parse-api
 ### curl命令
 ```bash
 # 解析音频
-curl "http://localhost:8080/api/v1/parse/audio?bvid=BV1xx411c7mD"
+curl "http://localhost:8080/api/v1/parse?bv=BV1xx411c7mD"
 
 # 指定音质解析
-curl "http://localhost:8080/api/v1/parse/audio?bvid=BV1xx411c7mD&quality=30280"
+curl "http://localhost:8080/api/v1/parse?bv=BV1xx411c7mD&quality=30280"
 
 # 检查服务状态  
 curl "http://localhost:8080/api/v1/status"
+
+# 检查健康状态  
+curl "http://localhost:8080/api/v1/health"
 
 # 直接下载MP3文件
 curl -o "audio.mp3" "http://localhost:8080/static/BV1xx411c7mD_30280_1694123456.mp3"

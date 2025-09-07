@@ -4,3 +4,8 @@
 *~
 *.swp
 .DS_Store
+
+# Runtime Directory
+parse_cache/ 
+logs/
+data.db
