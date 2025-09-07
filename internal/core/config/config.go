@@ -4,10 +4,43 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
 )
+
+// Duration 自定义duration类型，支持"never"值
+type Duration struct {
+	time.Duration
+	IsNever bool
+}
+
+// UnmarshalText 实现text unmarshaler接口
+func (d *Duration) UnmarshalText(text []byte) error {
+	s := strings.TrimSpace(string(text))
+	if strings.ToLower(s) == "never" {
+		d.IsNever = true
+		d.Duration = 0
+		return nil
+	}
+
+	duration, err := time.ParseDuration(s)
+	if err != nil {
+		return err
+	}
+	d.Duration = duration
+	d.IsNever = false
+	return nil
+}
+
+// String 返回duration的字符串表示
+func (d Duration) String() string {
+	if d.IsNever {
+		return "never"
+	}
+	return d.Duration.String()
+}
 
 type Config struct {
 	Server    ServerConfig    `mapstructure:"server"`
@@ -31,9 +64,9 @@ type DatabaseConfig struct {
 }
 
 type CacheConfig struct {
-	Dir             string        `mapstructure:"dir"`
-	TTL             time.Duration `mapstructure:"ttl"`
-	CleanupInterval time.Duration `mapstructure:"cleanup_interval"`
+	Dir             string   `mapstructure:"dir"`
+	TTL             Duration `mapstructure:"-"`
+	CleanupInterval Duration `mapstructure:"-"`
 }
 
 type BilibiliConfig struct {
@@ -86,7 +119,29 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
+	// 手动处理自定义Duration类型
+	if err := parseCacheDurations(&config); err != nil {
+		return nil, fmt.Errorf("failed to parse cache durations: %w", err)
+	}
+
 	return &config, nil
+}
+
+// parseCacheDurations 手动解析缓存相关的duration配置
+func parseCacheDurations(config *Config) error {
+	// 解析 cache.ttl
+	ttlStr := viper.GetString("cache.ttl")
+	if err := config.Cache.TTL.UnmarshalText([]byte(ttlStr)); err != nil {
+		return fmt.Errorf("invalid cache.ttl value '%s': %w", ttlStr, err)
+	}
+
+	// 解析 cache.cleanup_interval
+	cleanupStr := viper.GetString("cache.cleanup_interval")
+	if err := config.Cache.CleanupInterval.UnmarshalText([]byte(cleanupStr)); err != nil {
+		return fmt.Errorf("invalid cache.cleanup_interval value '%s': %w", cleanupStr, err)
+	}
+
+	return nil
 }
 
 func setDefaults() {
@@ -148,8 +203,8 @@ database:
 
 cache:
   dir: "./parse_cache"
-  ttl: "24h"
-  cleanup_interval: "1h"
+  ttl: "24h"        # 缓存过期时间，支持 "never" 表示永不过期
+  cleanup_interval: "1h"  # 清理间隔，支持 "never" 表示永不清理
 
 bilibili:
   user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"

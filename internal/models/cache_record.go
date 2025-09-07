@@ -38,4 +38,5 @@ type AudioInfo struct {
 	Quality     int    `json:"quality"`      // 音质编号
 	Size        int64  `json:"size"`         // 文件大小
 	FileName    string `json:"file_name"`    // 本地文件名
+	Expiring    int64  `json:"expiring"`     // 过期时间（秒），-1表示永不过期
 }

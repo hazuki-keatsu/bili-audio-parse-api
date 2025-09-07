@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"bili-parse-api/internal/core/config"
 	"bili-parse-api/internal/models"
 	"crypto/md5"
 	"encoding/json"
@@ -16,7 +17,7 @@ import (
 // Manager 缓存管理器
 type Manager struct {
 	cacheDir string
-	ttl      time.Duration
+	ttl      config.Duration
 	db       *gorm.DB
 }
 
@@ -29,7 +30,7 @@ type CacheItem struct {
 }
 
 // NewManager 创建缓存管理器
-func NewManager(cacheDir string, ttl time.Duration, db *gorm.DB) *Manager {
+func NewManager(cacheDir string, ttl config.Duration, db *gorm.DB) *Manager {
 	// 确保缓存目录存在
 	if err := os.MkdirAll(cacheDir, 0755); err != nil {
 		// 记录错误但不中断程序
@@ -105,6 +106,20 @@ func (m *Manager) Get(bvid string, quality int) *models.AudioInfo {
 		}
 	}
 
+	// 更新expiring字段为剩余过期时间
+	if item.Data != nil {
+		now := time.Now()
+		if m.ttl.IsNever {
+			item.Data.Expiring = -1 // 永不过期
+		} else {
+			remainingSeconds := int64(item.ExpiresAt.Sub(now).Seconds())
+			if remainingSeconds < 0 {
+				remainingSeconds = 0
+			}
+			item.Data.Expiring = remainingSeconds
+		}
+	}
+
 	return item.Data
 }
 
@@ -113,11 +128,21 @@ func (m *Manager) Set(bvid string, quality int, audioInfo *models.AudioInfo) err
 	key := m.generateKey(bvid, quality)
 	now := time.Now()
 
+	var expiresAt time.Time
+	if m.ttl.IsNever {
+		// 永不过期，设置为一个很远的未来时间
+		expiresAt = time.Date(2099, 12, 31, 23, 59, 59, 0, time.UTC)
+		audioInfo.Expiring = -1 // -1表示永不过期
+	} else {
+		expiresAt = now.Add(m.ttl.Duration)
+		audioInfo.Expiring = int64(m.ttl.Duration.Seconds()) // 过期时间的秒数
+	}
+
 	item := CacheItem{
 		Key:       key,
 		Data:      audioInfo,
 		CreatedAt: now,
-		ExpiresAt: now.Add(m.ttl),
+		ExpiresAt: expiresAt,
 	}
 
 	// 1. 写入缓存文件
@@ -162,6 +187,15 @@ func (m *Manager) CleanupExpired() error {
 	cleanedCount := 0
 	// 2. 删除文件和数据库记录
 	for _, record := range expiredRecords {
+		// 先读取JSON文件获取MP3文件信息（在删除JSON文件之前）
+		var mp3FileName string
+		if data, err := os.ReadFile(record.FilePath); err == nil {
+			var item CacheItem
+			if json.Unmarshal(data, &item) == nil && item.Data != nil && item.Data.FileName != "" {
+				mp3FileName = item.Data.FileName
+			}
+		}
+
 		// 删除JSON缓存文件
 		if err := os.Remove(record.FilePath); err != nil && !os.IsNotExist(err) {
 			fmt.Printf("Warning: failed to remove cache file %s: %v\n", record.FilePath, err)
@@ -169,19 +203,13 @@ func (m *Manager) CleanupExpired() error {
 			cleanedCount++
 		}
 
-		// 尝试删除对应的MP3文件
-		// 从JSON文件路径推断缓存键
-		cacheKey := record.CacheKey
-		jsonPath := filepath.Join(m.cacheDir, cacheKey+".json")
-
-		// 读取JSON文件获取MP3文件名
-		if data, err := os.ReadFile(jsonPath); err == nil {
-			var item CacheItem
-			if json.Unmarshal(data, &item) == nil && item.Data != nil && item.Data.FileName != "" {
-				mp3Path := filepath.Join(m.cacheDir, item.Data.FileName)
-				if err := os.Remove(mp3Path); err != nil && !os.IsNotExist(err) {
-					fmt.Printf("Warning: failed to remove MP3 file %s: %v\n", mp3Path, err)
-				}
+		// 删除对应的MP3文件
+		if mp3FileName != "" {
+			mp3Path := filepath.Join(m.cacheDir, mp3FileName)
+			if err := os.Remove(mp3Path); err != nil && !os.IsNotExist(err) {
+				fmt.Printf("Warning: failed to remove MP3 file %s: %v\n", mp3Path, err)
+			} else {
+				fmt.Printf("Removed MP3 file: %s\n", mp3FileName)
 			}
 		}
 
@@ -206,8 +234,14 @@ func (m *Manager) generateKey(bvid string, quality int) string {
 }
 
 // StartCleanupWorker 启动清理工作协程
-func (m *Manager) StartCleanupWorker(interval time.Duration) {
-	ticker := time.NewTicker(interval)
+func (m *Manager) StartCleanupWorker(interval config.Duration) {
+	if interval.IsNever {
+		// 如果设置为never，则不启动清理工作
+		fmt.Println("Cache cleanup disabled (set to 'never')")
+		return
+	}
+
+	ticker := time.NewTicker(interval.Duration)
 	go func() {
 		defer ticker.Stop()
 		for range ticker.C {

@@ -9,8 +9,8 @@ database:
 
 cache:
   dir: "./parse_cache"
-  ttl: "1h"        # 缓存过期时间
-  cleanup_interval: "30m"  # 清理间隔
+  ttl: "1h"        # 缓存过期时间，支持 "never" 表示永不过期
+  cleanup_interval: "30m"  # 清理间隔，支持 "never" 表示永不清理
 
 bilibili:
   user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"

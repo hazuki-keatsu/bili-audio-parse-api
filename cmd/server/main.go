@@ -50,7 +50,11 @@ func main() {
 	// 初始化并启动缓存清理工作器
 	cacheManager := cache.NewManager(cfg.Cache.Dir, cfg.Cache.TTL, db)
 	cacheManager.StartCleanupWorker(cfg.Cache.CleanupInterval)
-	logrus.Infof("Cache cleanup worker started with interval: %v", cfg.Cache.CleanupInterval)
+	if cfg.Cache.CleanupInterval.IsNever {
+		logrus.Info("Cache cleanup disabled (set to 'never')")
+	} else {
+		logrus.Infof("Cache cleanup worker started with interval: %v", cfg.Cache.CleanupInterval)
+	}
 
 	// 启动日志清理任务
 	startLogCleanup(cfg)

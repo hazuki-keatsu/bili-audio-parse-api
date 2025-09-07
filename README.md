@@ -122,7 +122,8 @@ go build ./cmd/server
     "duration": 180,
     "quality": 30280,
     "size": 4096000,
-    "file_name": "BV1xx411c7mD_30280_1694123456.mp3"
+    "file_name": "BV1xx411c7mD_30280_1694123456.mp3",
+    "expiring": 3600
   }
 }
 ```
@@ -131,6 +132,7 @@ go build ./cmd/server
 - `url`: 本地MP3文件的访问路径，可直接用于播放
 - `original_url`: 原始B站音频链接
 - `file_name`: 本地缓存的文件名
+- `expiring`: 剩余过期时间（秒），-1表示永不过期，number类型，单位是秒
 
 ### 服务状态
 
