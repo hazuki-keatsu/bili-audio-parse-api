@@ -1,4 +1,4 @@
-module bili-parse-api
+module github.com/hazuki-keatsu/bili-audio-parse-api
 
 go 1.25.0
 
