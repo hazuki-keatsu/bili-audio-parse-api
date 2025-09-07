@@ -1,0 +1,35 @@
+server:
+  host: "0.0.0.0"
+  port: "8080"
+  debug: false
+
+database:
+  type: "sqlite"  # sqlite/mysql
+  dsn: "./data.db"  # SQLite文件路径或MySQL连接字符串
+
+cache:
+  dir: "./parse_cache"
+  ttl: "1h"        # 缓存过期时间
+  cleanup_interval: "30m"  # 清理间隔
+
+bilibili:
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+  referer: "https://www.bilibili.com"
+  timeout: "30s"
+
+rate_limit:
+  enabled: true
+  requests_per_minute: 20
+  burst: 5
+
+cors:
+  allowed_origins: ["*"]
+  allowed_methods: ["GET", "POST", "OPTIONS"]
+  allowed_headers: ["*"]
+
+logging:
+  level: "info"   # debug/info/warn/error
+  file: "./logs/app.log"
+  max_size: 100   # MB
+  max_backups: 7
+  max_age: 30     # days

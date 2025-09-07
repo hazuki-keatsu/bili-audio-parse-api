@@ -1,14 +1,20 @@
 version: '3.8'
+
 services:
   bili-parse-api:
     build: .
     ports:
       - "8080:8080"
+    volumes:
+      - ./parse_cache:/root/parse_cache
+      - ./logs:/root/logs
+      - ./configs:/root/configs
+      - ./data.db:/root/data.db
     environment:
       - GIN_MODE=release
-      - JWT_SECRET=bili-parse-api-secret-key-2025
-      - ENCRYPTION_KEY=my-32-byte-encryption-key-12345
-    volumes:
-      - ./data:/root/data
-      - ./logs:/root/logs
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
