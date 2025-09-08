@@ -6,7 +6,7 @@
 > 
 > 本项目完全使用 AI 生成，是作者对 AI 工具流的实验。
 > - 需求文档撰写：豆包网页版
-> - 开发文档撰写：Claude Sonnet 4
+> - 开发文档撰写：Claude Sonnet 4 (忘记跟踪文件，导致文件内容丢失)
 > - 代码开发：Claude Sonnet 4
 > - 文档审查：hazuki-keatsu
 > - 代码审查：hazuki-keatsu
