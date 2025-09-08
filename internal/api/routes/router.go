@@ -1,10 +1,10 @@
 package routes
 
 import (
-	"bili-parse-api/internal/api/handlers"
-	"bili-parse-api/internal/api/middleware"
-	"bili-parse-api/internal/core/cache"
-	"bili-parse-api/internal/core/config"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/api/handlers"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/api/middleware"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/core/cache"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/core/config"
 	"time"
 
 	"github.com/gin-gonic/gin"

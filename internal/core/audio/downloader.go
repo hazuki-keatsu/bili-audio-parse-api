@@ -1,7 +1,7 @@
 package audio
 
 import (
-	"bili-parse-api/internal/models"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/models"
 	"fmt"
 	"io"
 	"net/http"

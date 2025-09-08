@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"bili-parse-api/internal/core/bilibili"
-	"bili-parse-api/internal/core/cache"
-	"bili-parse-api/internal/models"
-	"bili-parse-api/internal/utils"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/core/bilibili"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/core/cache"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/models"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/utils"
 	"net/http"
 	"time"
 

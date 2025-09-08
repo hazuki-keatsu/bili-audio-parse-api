@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"bili-parse-api/internal/utils"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/utils"
 	"net/http"
 	"sync"
 	"time"

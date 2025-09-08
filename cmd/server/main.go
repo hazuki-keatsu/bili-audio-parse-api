@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"bili-parse-api/internal/api/routes"
-	"bili-parse-api/internal/core/cache"
-	"bili-parse-api/internal/core/config"
-	"bili-parse-api/internal/models"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/api/routes"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/core/cache"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/core/config"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/models"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"

@@ -1,8 +1,8 @@
 package bilibili
 
 import (
-	"bili-parse-api/internal/core/audio"
-	"bili-parse-api/internal/models"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/core/audio"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/models"
 	"encoding/json"
 	"fmt"
 	"io"

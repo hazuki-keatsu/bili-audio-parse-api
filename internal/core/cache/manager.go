@@ -1,8 +1,8 @@
 package cache
 
 import (
-	"bili-parse-api/internal/core/config"
-	"bili-parse-api/internal/models"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/core/config"
+	"github.com/hazuki-keatsu/bili-audio-parse-api/internal/models"
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
